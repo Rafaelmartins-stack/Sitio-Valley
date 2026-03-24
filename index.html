@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sitio Valley - Simulator</title>
+    <!-- Phaser Library -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Dashboard Presidencial -->
+        <div id="hud">
+            <div class="hud-panel">
+                <div class="stat">
+                    <span class="stat-label">Dinheiro</span>
+                    <span class="stat-value" id="money-display">$1000</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Comida</span>
+                    <span class="stat-value" id="food-display">0</span>
+                </div>
+            </div>
+            <div class="hud-panel">
+                <div class="stat">
+                    <span class="stat-label">População</span>
+                    <span class="stat-value" id="population-display">100</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas do Sistema -->
+        <div id="announcement">Bem-vindo, Sr. Presidente!</div>
+
+        <!-- Painel de Comando -->
+        <div id="controls">
+            <button class="btn" onclick="hireWorker()">
+                <span>Contratar Gari-Engenheiro ($100)</span>
+            </button>
+            <div id="tooltip">
+                Dica: Clique na grama para plantar comida ($10)
+            </div>
+        </div>
+    </div>
+
+    <!-- Jogo -->
+    <script src="js/main.js"></script>
+</body>
+</html>
