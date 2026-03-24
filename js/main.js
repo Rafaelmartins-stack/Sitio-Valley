@@ -179,11 +179,40 @@ function createRoadTexture(scene) {
 
 function createCarTexture(scene) {
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-    graphics.fillStyle(0xef4444, 1); // Carros vermelhos aparecem melhor
-    graphics.fillRect(5, 10, 22, 12);
-    graphics.fillStyle(0x000000, 1);
-    graphics.fillRect(6, 8, 4, 2); graphics.fillRect(20, 8, 4, 2);
-    graphics.fillRect(6, 22, 4, 2); graphics.fillRect(20, 22, 4, 2);
+    
+    // Sombra (Underneath)
+    graphics.fillStyle(0x000000, 0.3);
+    graphics.fillRoundedRect(2, 2, 28, 28, 6);
+
+    // Corpo do Carro (Vibrante)
+    graphics.fillStyle(0xef4444, 1);
+    graphics.fillRoundedRect(4, 6, 24, 20, 4);
+
+    // Vidro (Roof)
+    graphics.fillStyle(0xbae6fd, 1); // Light Blue Glass
+    graphics.fillRoundedRect(8, 8, 16, 16, 2);
+
+    // Janelas Separadoras
+    graphics.fillStyle(0xef4444, 1); 
+    graphics.fillRect(15, 8, 2, 16);
+
+    // Faróis (Headlights - Right side when forward)
+    graphics.fillStyle(0xfde047, 1);
+    graphics.fillRect(26, 8, 2, 4);  // Top Light
+    graphics.fillRect(26, 18, 2, 4); // Bottom Light
+
+    // Lanternas (Taillights - Left side)
+    graphics.fillStyle(0x991b1b, 1);
+    graphics.fillRect(4, 8, 2, 4);
+    graphics.fillRect(4, 18, 2, 4);
+
+    // Rodas (Mais detalhadas)
+    graphics.fillStyle(0x1e293b, 1);
+    graphics.fillRoundedRect(6, 4, 6, 4, 1);
+    graphics.fillRoundedRect(20, 4, 6, 4, 1);
+    graphics.fillRoundedRect(6, 24, 6, 4, 1);
+    graphics.fillRoundedRect(20, 24, 6, 4, 1);
+
     graphics.generateTexture('car', 32, 32);
 }
 
