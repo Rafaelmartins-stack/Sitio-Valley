@@ -96,9 +96,9 @@ function create() {
     }
 
     // Timers de Vida Urbana (Muito mais frequentes agora!)
-    this.time.addEvent({ delay: 1200, callback: () => spawnCar(this), loop: true });
+    this.time.addEvent({ delay: 1000, callback: () => spawnCar(this), loop: true });
     this.time.addEvent({ delay: 3000, callback: () => spawnCitizen(this), loop: true });
-    this.time.addEvent({ delay: 10000, callback: () => spawnHole(this, true), loop: true });
+    this.time.addEvent({ delay: 8000, callback: () => spawnHole(this, false), loop: true }); // Apenas fora da estrada
 
     // Colisões e Overlaps
     this.physics.add.overlap(workerGroup, holes, (worker, hole) => {
@@ -108,16 +108,13 @@ function create() {
         showAnnouncement("Reparo concluído! +$15");
     });
 
-    this.physics.add.overlap(carGroup, holes, (car, hole) => {
-        car.setTint(0xff0000);
-        car.body.setVelocity(0);
-        car.body.setAngularVelocity(200);
-        showAnnouncement("ACIDENTE NA VIA!");
-        this.time.delayedCall(2000, () => car.destroy());
-    });
+    // Desativado acidente temporariamente para depuração
+    // this.physics.add.overlap(carGroup, holes, (car, hole) => { ... });
 
     window.gameScene = this;
 }
+
+let carCounter = 0; // Para depuração
 
 function update() {
     // Mover NPCs e sincronizar máscaras/emojis
@@ -135,7 +132,7 @@ function update() {
             if (!c.isDistracted) {
                 moveNPC(c.sprite, 60, 0.03);
             } else {
-                c.sprite.body.setVelocity(0, 0); // Para para olhar o celular
+                c.sprite.body.setVelocity(0, 0); 
                 if (c.cellIcon) {
                     c.cellIcon.setPosition(c.sprite.x, c.sprite.y - 20);
                 }
@@ -323,3 +320,11 @@ window.hireWorker = function() {
         gameState.workers.push({ sprite: sprite });
     }
 }
+
+window.spawnManualCar = function() {
+    if (window.gameScene) {
+        spawnCar(window.gameScene);
+        showAnnouncement("Gerando tráfego na via!");
+    }
+}
+
