@@ -79,8 +79,8 @@ function create() {
     createCarTexture(this);
 
     // Create Grid Map with a "Street" in the middle
-    const tileSize = 64;
-    const roadRow = 4; // Road on row 4
+    const tileSize = 48;
+    const roadRow = 5; // Road on row 5
 
     for (let y = 0; y < config.height / tileSize; y++) {
         for (let x = 0; x < config.width / tileSize; x++) {
@@ -90,6 +90,7 @@ function create() {
             }
             
             const tile = this.add.sprite(x * tileSize + tileSize/2, y * tileSize + tileSize/2, tileKey).setInteractive();
+            tile.setDisplaySize(tileSize, tileSize);
             
             if (tileKey === 'grass') {
                 tile.on('pointerdown', () => {
@@ -141,13 +142,14 @@ function create() {
         car.setTint(0xff0000);
         car.body.setVelocity(0);
         car.body.setAngularVelocity(100);
-        showAnnouncement("ACIDENTE! 'Sprite Crash' bloqueou a via!");
+        showAnnouncement("ACIDENTE BLOQUEOU A VIA!");
         
         // Remove car after delay
         this.time.delayedCall(3000, () => car.destroy());
     });
 
     window.gameScene = this;
+    window.tileSize = tileSize;
 }
 
 function update() {
@@ -197,9 +199,11 @@ function createCarTexture(scene) {
 }
 
 function spawnCar(scene) {
-    const roadY = 4 * 64 + 32;
+    const tileSize = window.tileSize;
+    const roadY = 5 * tileSize + tileSize/2;
     const car = scene.physics.add.sprite(-50, roadY, 'car');
-    car.setVelocityX(200);
+    car.setDisplaySize(tileSize, tileSize);
+    car.setVelocityX(150);
     carGroup.add(car);
 }
 
@@ -208,37 +212,41 @@ function spawnCitizen(scene) {
     const y = Phaser.Math.Between(0, 600);
     const citizen = scene.physics.add.sprite(x, y, 'worker');
     citizen.setTint(Phaser.Math.Between(0x000000, 0xffffff));
-    citizen.setScale(0.8);
+    citizen.setDisplaySize(window.tileSize, window.tileSize);
     citizenGroup.add(citizen);
     gameState.citizens.push({ sprite: citizen });
 }
 
 function spawnHole(scene, onRoad = false) {
+    const tileSize = window.tileSize;
     let x, y;
     if (onRoad) {
         x = Phaser.Math.Between(50, config.width - 50);
-        y = 4 * 64 + 32;
+        y = 5 * tileSize + tileSize/2;
     } else {
         x = Phaser.Math.Between(50, config.width - 50);
         y = Phaser.Math.Between(50, config.height - 50);
     }
     const hole = scene.physics.add.sprite(x, y, 'hole');
+    hole.setDisplaySize(tileSize, tileSize);
     holes.add(hole);
 }
 
 function plantCrop(scene, x, y) {
+    const tileSize = window.tileSize;
     if (gameState.money >= 10) {
         gameState.money -= 10;
         updateUI();
         
         const crop = scene.physics.add.sprite(x, y, 'crop');
-        crop.setScale(0.5);
+        crop.setDisplaySize(tileSize * 0.5, tileSize * 0.5);
         crops.add(crop);
 
         scene.tweens.add({
             targets: crop,
-            scale: 1,
-            duration: 5000,
+            displayWidth: tileSize,
+            displayHeight: tileSize,
+            duration: 3000,
             ease: 'Power1',
             onComplete: () => {
                 crop.setTint(0x00ff00);
@@ -266,6 +274,7 @@ window.hireWorker = function() {
         const sprite = scene.physics.add.sprite(x, y, 'worker');
         sprite.setCollideWorldBounds(true);
         sprite.setBounce(1, 1);
+        sprite.setDisplaySize(window.tileSize, window.tileSize);
         sprite.setVelocity(100, 100);
         workerGroup.add(sprite);
         gameState.workers.push({ sprite: sprite });
