@@ -210,43 +210,63 @@ function createRoadTexture(scene) {
 }
 
 function createCarTexture(scene) {
-    // Versão Simplificada e Robusta para garantir visibilidade
-    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-    
-    // Corpo Vermelho Vivo
-    graphics.fillStyle(0xff0000, 1);
-    graphics.fillRect(4, 8, 24, 16);
-    
-    // Janelas Azuis Claras
-    graphics.fillStyle(0x00ffff, 1);
-    graphics.fillRect(10, 10, 12, 12);
-    
-    // Rodas Pretas
-    graphics.fillStyle(0x000000, 1);
-    graphics.fillRect(6, 6, 4, 4);
-    graphics.fillRect(20, 6, 4, 4);
-    graphics.fillRect(6, 22, 4, 4);
-    graphics.fillRect(20, 22, 4, 4);
+    const colors = {
+        'car_red': 0xef4444,
+        'car_blue': 0x3b82f6,
+        'car_green': 0x22c55e,
+        'car_yellow': 0xfbbf24
+    };
 
-    graphics.generateTexture('car_simple', 32, 32);
+    // 1. Cores Básicas
+    Object.entries(colors).forEach(([key, color]) => {
+        const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+        graphics.fillStyle(0x000000, 0.3);
+        graphics.fillRoundedRect(2, 2, 28, 28, 6);
+        graphics.fillStyle(color, 1);
+        graphics.fillRoundedRect(4, 6, 24, 20, 4);
+        graphics.fillStyle(0xbae6fd, 1); 
+        graphics.fillRect(10, 8, 12, 16);
+        graphics.generateTexture(key, 32, 32);
+    });
+
+    // 2. Station Wagon Presidencial (Inspirada no upload)
+    const wagon = scene.make.graphics({ x: 0, y: 0, add: false });
+    wagon.fillStyle(0x000000, 0.3);
+    wagon.fillRoundedRect(2, 2, 40, 28, 6);
+    wagon.fillStyle(0xef4444, 1);
+    wagon.fillRoundedRect(4, 6, 36, 20, 4);
+    wagon.fillStyle(0x3b82f6, 1); // Vidros azuis como pedido
+    wagon.fillRect(10, 8, 10, 16); wagon.fillRect(24, 8, 10, 16);
+    wagon.generateTexture('car_station_wagon', 44, 32);
+
+    // 3. Viatura da Polícia
+    const pol = scene.make.graphics({ x: 0, y: 0, add: false });
+    pol.fillStyle(0x1e293b, 1); // Preto/Azul escuro
+    pol.fillRoundedRect(4, 6, 24, 20, 4);
+    pol.fillStyle(0xffffff, 1); // Faixa branca
+    pol.fillRect(4, 14, 24, 4);
+    pol.fillStyle(0x3b82f6, 1); // Giroflex azul
+    pol.fillRect(14, 4, 4, 4);
+    pol.generateTexture('car_police', 32, 32);
 }
 
 function spawnCar(scene) {
-    if (!carGroup) return; // Segurança contra inicialização lenta
-    
     const ts = window.tileSize || 32;
-    const roadY = 7 * ts + ts/2; // O asfalto está na linha 7
+    const roadY = 7 * ts + ts/2;
     const fromRight = Math.random() > 0.5;
-    const startX = fromRight ? 850 : -50;
+    const startX = fromRight ? 900 : -100;
     
-    const car = scene.physics.add.sprite(startX, roadY, 'car_simple').setInteractive();
-    car.setDepth(100); // Garante que o carro fique por cima de tudo
-    car.setVelocityX(fromRight ? -150 : 150);
+    // Mix de Tráfego
+    const keys = ['car_red', 'car_blue', 'car_green', 'car_yellow', 'car_police', 'car_station_wagon'];
+    const randomKey = Phaser.Utils.Array.GetRandom(keys);
+    
+    const car = scene.physics.add.sprite(startX, roadY, randomKey).setInteractive();
+    car.setDepth(100);
+    car.setVelocityX(fromRight ? -140 : 140);
     car.flipX = fromRight;
     
-    // Mecânica de Controle
     car.on('pointerdown', () => {
-        showAnnouncement("Carro sob controle presidencial!");
+        showAnnouncement("Veículo sob sua autoridade!");
         car.setTint(0x00ff00);
         scene.physics.moveToObject(car, scene.input.activePointer, 300);
     });
