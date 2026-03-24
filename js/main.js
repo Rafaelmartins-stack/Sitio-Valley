@@ -98,55 +98,82 @@ function create() {
     // Timers de Vida Urbana (Muito mais frequentes agora!)
     this.time.addEvent({ delay: 1000, callback: () => spawnCar(this), loop: true });
     this.time.addEvent({ delay: 3000, callback: () => spawnCitizen(this), loop: true });
-    this.time.addEvent({ delay: 8000, callback: () => spawnHole(this, false), loop: true }); // Apenas fora da estrada
+    this.time.addEvent({ delay: 6000, callback: () => spawnHole(this, true), loop: true }); // Policiais focam na estrada
 
-    // Colisões e Overlaps
-    this.physics.add.overlap(workerGroup, holes, (worker, hole) => {
+    // Colisões e Overlaps Automáticos para os Policiais
+    this.physics.add.overlap(workerGroup, holes, (police, hole) => {
         hole.destroy();
-        gameState.money += 15;
+        gameState.money += 20; // Bônus de multa/serviço
         updateUI();
-        showAnnouncement("Reparo concluído! +$15");
+        showAnnouncement("Policial consertou a via! +$20");
     });
-
-    // Desativado acidente temporariamente para depuração
-    // this.physics.add.overlap(carGroup, holes, (car, hole) => { ... });
 
     window.gameScene = this;
 }
 
-let carCounter = 0; // Para depuração
-
 function update() {
-    // Mover NPCs e sincronizar máscaras/emojis
-    gameState.workers.forEach(w => {
-        if (w.sprite.active) {
-            moveNPC(w.sprite, 100, 0.05);
-            if (w.sprite.customMask) {
-                w.sprite.customMask.setPosition(w.sprite.x, w.sprite.y);
+    // IA dos Policiais: Buscam problemas automaticamente!
+    gameState.workers.forEach(p => {
+        if (!p.sprite.active) return;
+        
+        let target = null;
+        let minDistance = 300;
+
+        // 1. Procurar buracos
+        holes.children.entries.forEach(h => {
+            const dist = Phaser.Math.Distance.Between(p.sprite.x, p.sprite.y, h.x, h.y);
+            if (dist < minDistance) { target = h; minDistance = dist; }
+        });
+
+        // 2. Procurar distraídos
+        gameState.citizens.forEach(c => {
+            if (c.isDistracted) {
+                const dist = Phaser.Math.Distance.Between(p.sprite.x, p.sprite.y, c.sprite.x, c.sprite.y);
+                if (dist < minDistance) { target = c.sprite; minDistance = dist; }
             }
+        });
+
+        if (target) {
+            this.physics.moveToObject(p.sprite, target, 120);
+            p.sprite.flipX = target.x < p.sprite.x;
+        } else {
+            moveNPC(p.sprite, 100, 0.05); // Deambula se não houver problemas
         }
+        
+        if (p.sprite.customMask) p.sprite.customMask.setPosition(p.sprite.x, p.sprite.y);
     });
 
+    // Cidadãos Distraídos e Intervenção Policial
     gameState.citizens.forEach(c => {
-        if (c.sprite.active) {
-            if (!c.isDistracted) {
-                moveNPC(c.sprite, 60, 0.03);
-            } else {
-                c.sprite.body.setVelocity(0, 0); 
-                if (c.cellIcon) {
-                    c.cellIcon.setPosition(c.sprite.x, c.sprite.y - 20);
+        if (!c.sprite.active) return;
+        
+        if (c.isDistracted) {
+            c.sprite.body.setVelocity(0, 0); 
+            if (c.cellIcon) c.cellIcon.setPosition(c.sprite.x, c.sprite.y - 20);
+            
+            // Se um policial encostar (proximidade < 30) remove celular
+            gameState.workers.forEach(p => {
+                if (Phaser.Math.Distance.Between(p.sprite.x, p.sprite.y, c.sprite.x, c.sprite.y) < 30) {
+                    c.isDistracted = false;
+                    if (c.cellIcon) c.cellIcon.destroy();
+                    gameState.money += 10;
+                    updateUI();
+                    showAnnouncement("Policial confiscou celular! +$10");
                 }
-            }
-            if (c.sprite.customMask) {
-                c.sprite.customMask.setPosition(c.sprite.x, c.sprite.y);
-            }
+            });
+        } else {
+            moveNPC(c.sprite, 60, 0.03);
         }
+        
+        if (c.sprite.customMask) c.sprite.customMask.setPosition(c.sprite.x, c.sprite.y);
     });
 
+    // Manutenção de Carros
     carGroup.children.entries.forEach(car => {
-        if (car.x > config.width + 100 || car.x < -100) car.destroy();
+        if (car.x > 900 || car.x < -100) car.destroy();
     });
 }
+
 
 function moveNPC(sprite, speed, chance) {
     if (!sprite.active || !sprite.body) return;
