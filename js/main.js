@@ -29,6 +29,14 @@ let gameState = {
     cars: []
 };
 
+// Global Game Objects
+let holes;
+let crops;
+let ground;
+let workerGroup;
+let carGroup;
+let citizenGroup;
+
 // UI References
 const moneyDisplay = document.getElementById('money-display');
 const foodDisplay = document.getElementById('food-display');
@@ -87,8 +95,8 @@ function create() {
         }
     }
 
-    // Timers de Vida Urbana (Mais frequentes agora)
-    this.time.addEvent({ delay: 2000, callback: () => spawnCar(this), loop: true });
+    // Timers de Vida Urbana (Muito mais frequentes agora!)
+    this.time.addEvent({ delay: 800, callback: () => spawnCar(this), loop: true });
     this.time.addEvent({ delay: 3000, callback: () => spawnCitizen(this), loop: true });
     this.time.addEvent({ delay: 10000, callback: () => spawnHole(this, true), loop: true });
 
