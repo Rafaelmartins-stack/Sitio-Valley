@@ -112,35 +112,25 @@ function create() {
     window.gameScene = this;
 }
 
-// Helper to remove unwanted background using masks
-function applyTransparencyMask(scene, sprite) {
-    // Como as imagens vieram com "falso fundo transparente" (checkerboard),
-    // aplicamos uma máscara circular ou retangular interna para esconder as bordas feias.
-    const shape = scene.make.graphics();
-    shape.fillStyle(0xffffff);
-    shape.beginPath();
-    shape.fillCircle(sprite.x, sprite.y, (window.tileSize / 2) * 0.9);
-    const mask = shape.createGeometryMask();
-    sprite.setMask(mask);
-    
-    // Armazenamos a máscara no sprite para movê-la junto com o personagem
-    sprite.customMask = shape;
-}
-
 function update() {
-    // Mover NPCs e atualizar suas máscaras
+    // Mover NPCs e sincronizar máscaras
     gameState.workers.forEach(w => {
-        moveNPC(w.sprite, 100, 0.02);
-        if (w.sprite.customMask) {
-            w.sprite.customMask.x = w.sprite.x - w.sprite.x; // Relativo
-            w.sprite.customMask.setPosition(w.sprite.x, w.sprite.y);
+        if (w.sprite.active) {
+            moveNPC(w.sprite, 100, 0.05); // Aumentada frequência de movimento
+            if (w.sprite.customMask) {
+                w.sprite.customMask.x = w.sprite.x;
+                w.sprite.customMask.y = w.sprite.y;
+            }
         }
     });
 
     gameState.citizens.forEach(c => {
-        moveNPC(c.sprite, 60, 0.01);
-        if (c.sprite.customMask) {
-            c.sprite.customMask.setPosition(c.sprite.x, c.sprite.y);
+        if (c.sprite.active) {
+            moveNPC(c.sprite, 60, 0.03);
+            if (c.sprite.customMask) {
+                c.sprite.customMask.x = c.sprite.x;
+                c.sprite.customMask.y = c.sprite.y;
+            }
         }
     });
 
@@ -150,12 +140,28 @@ function update() {
 }
 
 function moveNPC(sprite, speed, chance) {
-    if (!sprite.active) return;
-    if (Math.random() < chance) {
+    if (!sprite.active || !sprite.body) return;
+    
+    // Se estiver parado ou aleatoriamente, muda de direção
+    if (sprite.body.velocity.x === 0 || Math.random() < chance) {
         const angle = Math.random() * Math.PI * 2;
         sprite.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
         sprite.flipX = (sprite.body.velocity.x < 0);
     }
+}
+
+function applyTransparencyMask(scene, sprite) {
+    // Criamos o gráfico da máscara na posição 0,0 para que setPosition funcione via coordenadas de mundo
+    const shape = scene.make.graphics();
+    shape.fillStyle(0xffffff);
+    shape.fillCircle(0, 0, (window.tileSize / 2) * 0.9);
+    
+    const mask = shape.createGeometryMask();
+    sprite.setMask(mask);
+    sprite.customMask = shape;
+    
+    // Posiciona inicialmente
+    shape.setPosition(sprite.x, sprite.y);
 }
 
 function createRoadTexture(scene) {
