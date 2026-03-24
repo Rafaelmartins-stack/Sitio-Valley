@@ -374,4 +374,3 @@ window.spawnManualCar = function() {
         showAnnouncement("Gerando tráfego na via!");
     }
 }
-
