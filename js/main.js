@@ -193,39 +193,33 @@ function createCarTexture(scene) {
         'car_yellow': 0xeab308
     };
 
+    // Criar as 4 skins básicas + Station Wagon Presidencial
     Object.entries(colors).forEach(([key, color]) => {
         const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-        
-        // Sombra
         graphics.fillStyle(0x000000, 0.3);
         graphics.fillRoundedRect(2, 2, 28, 28, 6);
-
-        // Corpo do Carro (Cor Dinâmica)
         graphics.fillStyle(color, 1);
         graphics.fillRoundedRect(4, 6, 24, 20, 4);
-
-        // Vidro
         graphics.fillStyle(0xbae6fd, 1); 
         graphics.fillRoundedRect(8, 8, 16, 16, 2);
-
-        // Vidro Central
         graphics.fillStyle(color, 1); 
         graphics.fillRect(15, 8, 2, 16);
-
-        // Faróis (Lado Direito)
-        graphics.fillStyle(0xfde047, 1);
-        graphics.fillRect(26, 8, 2, 3);
-        graphics.fillRect(26, 19, 2, 3);
-
-        // Rodas
-        graphics.fillStyle(0x1e293b, 1);
-        graphics.fillRoundedRect(6, 4, 6, 4, 1);
-        graphics.fillRoundedRect(20, 4, 6, 4, 1);
-        graphics.fillRoundedRect(6, 24, 6, 4, 1);
-        graphics.fillRoundedRect(20, 24, 6, 4, 1);
-
         graphics.generateTexture(key, 32, 32);
     });
+
+    // Skin Station Wagon (Inspirada no upload do usuário)
+    const wagon = scene.make.graphics({ x: 0, y: 0, add: false });
+    wagon.fillStyle(0x000000, 0.3);
+    wagon.fillRoundedRect(2, 2, 36, 28, 6); // Alongada
+    wagon.fillStyle(0xef4444, 1);
+    wagon.fillRoundedRect(2, 6, 32, 20, 4);
+    wagon.fillStyle(0x3b82f6, 1); // Vidros azuis
+    wagon.fillRect(10, 8, 10, 16); // Vidro frontal/central
+    wagon.fillRect(22, 8, 8, 16); // Vidro traseiro (Station Wagon)
+    wagon.fillStyle(0x1e293b, 1); // Rodas
+    wagon.fillRect(6, 4, 6, 4); wagon.fillRect(24, 4, 6, 4);
+    wagon.fillRect(6, 24, 6, 4); wagon.fillRect(24, 24, 6, 4);
+    wagon.generateTexture('car_station_wagon', 40, 32);
 }
 
 function spawnCar(scene) {
@@ -234,13 +228,29 @@ function spawnCar(scene) {
     const fromRight = Math.random() > 0.5;
     const startX = fromRight ? 850 : -50;
     
-    // Sorteia uma cor aleatória
-    const carKeys = ['car_red', 'car_blue', 'car_green', 'car_yellow'];
-    const randomKey = Phaser.Utils.Array.GetRandom(carKeys);
+    // Chance de ser a Station Wagon especial
+    let randomKey = Phaser.Utils.Array.GetRandom(['car_red', 'car_blue', 'car_green', 'car_yellow']);
+    if (Math.random() < 0.15) randomKey = 'car_station_wagon';
     
-    const car = scene.physics.add.sprite(startX, roadY, randomKey);
+    const car = scene.physics.add.sprite(startX, roadY, randomKey).setInteractive();
     car.setVelocityX(fromRight ? -150 : 150);
     car.flipX = fromRight;
+    
+    // Função Especial: Clicar no carro faz ele "seguir o mouse" (Carro Presidencial)
+    car.on('pointerdown', () => {
+        showAnnouncement("Comando Presidencial Ativo! O carro seguirá você!");
+        car.setTint(0xffffff);
+        scene.time.addEvent({
+            delay: 50,
+            repeat: 100, // 5 segundos
+            callback: () => {
+                if (car.active) {
+                    scene.physics.moveToObject(car, scene.input.activePointer, 300);
+                }
+            }
+        });
+    });
+
     carGroup.add(car);
 }
 
