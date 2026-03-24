@@ -47,14 +47,6 @@ function showAnnouncement(text) {
     }, 3000);
 }
 
-// --- Game Logic ---
-let holes;
-let crops;
-let ground;
-let workerGroup;
-let carGroup;
-let citizenGroup;
-
 function preload() {
     // Basic Assets
     this.load.image('grass', 'assets/grass.png');
@@ -65,8 +57,11 @@ function preload() {
 
 function create() {
     const self = this;
-    
-    // Create world groups
+    const tileSize = 32; // Reduzido drasticamente conforme solicitado
+    const roadRow = 7; // Ajustado para a nova grade menor
+    window.tileSize = tileSize;
+
+    // Criar world groups
     ground = this.add.group();
     holes = this.physics.add.group();
     crops = this.physics.add.group();
@@ -74,90 +69,81 @@ function create() {
     carGroup = this.physics.add.group();
     citizenGroup = this.physics.add.group();
 
-    // Create Procedural Textures for missing/extra assets
+    // Criar Texturas
     createRoadTexture(this);
     createCarTexture(this);
 
-    // Create Grid Map with a "Street" in the middle
-    const tileSize = 48;
-    const roadRow = 5; // Road on row 5
-
+    // Gerar Mapa
     for (let y = 0; y < config.height / tileSize; y++) {
         for (let x = 0; x < config.width / tileSize; x++) {
-            let tileKey = 'grass';
-            if (y === roadRow) {
-                tileKey = 'road';
-            }
-            
+            let tileKey = (y === roadRow) ? 'road' : 'grass';
             const tile = this.add.sprite(x * tileSize + tileSize/2, y * tileSize + tileSize/2, tileKey).setInteractive();
             tile.setDisplaySize(tileSize, tileSize);
             
             if (tileKey === 'grass') {
-                tile.on('pointerdown', () => {
-                    plantCrop(self, x * tileSize + tileSize/2, y * tileSize + tileSize/2);
-                });
+                tile.on('pointerdown', () => plantCrop(self, x * tileSize + tileSize/2, y * tileSize + tileSize/2));
             }
-            
             ground.add(tile);
         }
     }
 
-    // Initial holes (on the road only for accidents!)
-    for(let i=0; i<3; i++) {
-        spawnHole(this, true); 
-    }
+    // Timers e Outros
+    for(let i=0; i<3; i++) spawnHole(this, true); 
+    this.time.addEvent({ delay: 5000, callback: () => spawnCar(this), loop: true });
+    this.time.addEvent({ delay: 6000, callback: () => spawnCitizen(this), loop: true });
+    this.time.addEvent({ delay: 10000, callback: () => spawnHole(this, true), loop: true });
 
-    // Car spawning timer
-    this.time.addEvent({
-        delay: 5000,
-        callback: () => spawnCar(this),
-        loop: true
-    });
-
-    // Citizen spawning timer
-    this.time.addEvent({
-        delay: 8000,
-        callback: () => spawnCitizen(this),
-        loop: true
-    });
-
-    // Hole spawning timer
-    this.time.addEvent({
-        delay: 10000,
-        callback: () => spawnHole(this, true),
-        loop: true
-    });
-
-    // Collision Logic
-    // 1. Workers fix holes
+    // Colisões e Overlaps
     this.physics.add.overlap(workerGroup, holes, (worker, hole) => {
         hole.destroy();
         gameState.money += 15;
         updateUI();
-        showAnnouncement("Manutenção realizada! +$15");
+        showAnnouncement("Reparo concluído! +$15");
     });
 
-    // 2. Cars crash on holes
     this.physics.add.overlap(carGroup, holes, (car, hole) => {
         car.setTint(0xff0000);
         car.body.setVelocity(0);
-        car.body.setAngularVelocity(100);
-        showAnnouncement("ACIDENTE BLOQUEOU A VIA!");
-        
-        // Remove car after delay
-        this.time.delayedCall(3000, () => car.destroy());
+        car.body.setAngularVelocity(200);
+        showAnnouncement("ACIDENTE NA VIA!");
+        this.time.delayedCall(2000, () => car.destroy());
     });
 
     window.gameScene = this;
-    window.tileSize = tileSize;
+}
+
+// Helper to remove unwanted background using masks
+function applyTransparencyMask(scene, sprite) {
+    // Como as imagens vieram com "falso fundo transparente" (checkerboard),
+    // aplicamos uma máscara circular ou retangular interna para esconder as bordas feias.
+    const shape = scene.make.graphics();
+    shape.fillStyle(0xffffff);
+    shape.beginPath();
+    shape.fillCircle(sprite.x, sprite.y, (window.tileSize / 2) * 0.9);
+    const mask = shape.createGeometryMask();
+    sprite.setMask(mask);
+    
+    // Armazenamos a máscara no sprite para movê-la junto com o personagem
+    sprite.customMask = shape;
 }
 
 function update() {
-    // NPC Movement (Workers & Citizens)
-    gameState.workers.forEach(w => moveNPC(w.sprite, 100, 0.02));
-    gameState.citizens.forEach(c => moveNPC(c.sprite, 60, 0.01));
+    // Mover NPCs e atualizar suas máscaras
+    gameState.workers.forEach(w => {
+        moveNPC(w.sprite, 100, 0.02);
+        if (w.sprite.customMask) {
+            w.sprite.customMask.x = w.sprite.x - w.sprite.x; // Relativo
+            w.sprite.customMask.setPosition(w.sprite.x, w.sprite.y);
+        }
+    });
 
-    // Cleanup cars out of bounds
+    gameState.citizens.forEach(c => {
+        moveNPC(c.sprite, 60, 0.01);
+        if (c.sprite.customMask) {
+            c.sprite.customMask.setPosition(c.sprite.x, c.sprite.y);
+        }
+    });
+
     carGroup.children.entries.forEach(car => {
         if (car.x > config.width + 100) car.destroy();
     });
@@ -168,42 +154,36 @@ function moveNPC(sprite, speed, chance) {
     if (Math.random() < chance) {
         const angle = Math.random() * Math.PI * 2;
         sprite.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-        sprite.flipX = sprite.body.velocity.x < 0;
+        sprite.flipX = (sprite.body.velocity.x < 0);
     }
 }
 
 function createRoadTexture(scene) {
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
     graphics.fillStyle(0x334155, 1);
-    graphics.fillRect(0, 0, 64, 64);
+    graphics.fillRect(0, 0, 32, 32);
     graphics.fillStyle(0xfde047, 1);
-    graphics.fillRect(16, 30, 32, 4); // Yellow line
-    graphics.generateTexture('road', 64, 64);
+    graphics.fillRect(8, 15, 16, 2);
+    graphics.generateTexture('road', 32, 32);
 }
 
 function createCarTexture(scene) {
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-    // Car Body
     graphics.fillStyle(0x3b82f6, 1);
-    graphics.fillRect(10, 20, 44, 24);
-    // Roof
+    graphics.fillRect(5, 10, 22, 12); // Corpo menor
     graphics.fillStyle(0x60a5fa, 1);
-    graphics.fillRect(18, 22, 28, 20);
-    // Wheels
+    graphics.fillRect(10, 11, 10, 10);
     graphics.fillStyle(0x000000, 1);
-    graphics.fillRect(12, 18, 8, 4);
-    graphics.fillRect(44, 18, 8, 4);
-    graphics.fillRect(12, 42, 8, 4);
-    graphics.fillRect(44, 42, 8, 4);
-    graphics.generateTexture('car', 64, 64);
+    graphics.fillRect(6, 8, 4, 2); graphics.fillRect(20, 8, 4, 2); // Rodas
+    graphics.fillRect(6, 22, 4, 2); graphics.fillRect(20, 22, 4, 2);
+    graphics.generateTexture('car', 32, 32);
 }
 
 function spawnCar(scene) {
-    const tileSize = window.tileSize;
-    const roadY = 5 * tileSize + tileSize/2;
+    const ts = window.tileSize;
+    const roadY = 7 * ts + ts/2;
     const car = scene.physics.add.sprite(-50, roadY, 'car');
-    car.setDisplaySize(tileSize, tileSize);
-    car.setVelocityX(150);
+    car.setVelocityX(120);
     carGroup.add(car);
 }
 
@@ -213,39 +193,39 @@ function spawnCitizen(scene) {
     const citizen = scene.physics.add.sprite(x, y, 'worker');
     citizen.setTint(Phaser.Math.Between(0x000000, 0xffffff));
     citizen.setDisplaySize(window.tileSize, window.tileSize);
+    applyTransparencyMask(scene, citizen);
     citizenGroup.add(citizen);
     gameState.citizens.push({ sprite: citizen });
 }
 
 function spawnHole(scene, onRoad = false) {
-    const tileSize = window.tileSize;
+    const ts = window.tileSize;
     let x, y;
     if (onRoad) {
         x = Phaser.Math.Between(50, config.width - 50);
-        y = 5 * tileSize + tileSize/2;
+        y = 7 * ts + ts/2;
     } else {
         x = Phaser.Math.Between(50, config.width - 50);
         y = Phaser.Math.Between(50, config.height - 50);
     }
     const hole = scene.physics.add.sprite(x, y, 'hole');
-    hole.setDisplaySize(tileSize, tileSize);
+    hole.setDisplaySize(ts, ts);
     holes.add(hole);
 }
 
 function plantCrop(scene, x, y) {
-    const tileSize = window.tileSize;
+    const ts = window.tileSize;
     if (gameState.money >= 10) {
         gameState.money -= 10;
         updateUI();
-        
         const crop = scene.physics.add.sprite(x, y, 'crop');
-        crop.setDisplaySize(tileSize * 0.5, tileSize * 0.5);
+        crop.setDisplaySize(ts * 0.3, ts * 0.3);
+        applyTransparencyMask(scene, crop); // Também limpa o fundo das plantas
         crops.add(crop);
-
         scene.tweens.add({
             targets: crop,
-            displayWidth: tileSize,
-            displayHeight: tileSize,
+            displayWidth: ts,
+            displayHeight: ts,
             duration: 3000,
             ease: 'Power1',
             onComplete: () => {
@@ -255,12 +235,9 @@ function plantCrop(scene, x, y) {
                     crop.destroy();
                     gameState.food += 10;
                     updateUI();
-                    showAnnouncement("Colheita Sucedida! +10");
                 });
             }
         });
-    } else {
-        showAnnouncement("Dinheiro insuficiente!");
     }
 }
 
@@ -269,16 +246,13 @@ window.hireWorker = function() {
         gameState.money -= 100;
         updateUI();
         const scene = window.gameScene;
-        const x = config.width / 2;
-        const y = config.height / 2;
-        const sprite = scene.physics.add.sprite(x, y, 'worker');
+        const sprite = scene.physics.add.sprite(400, 300, 'worker');
         sprite.setCollideWorldBounds(true);
         sprite.setBounce(1, 1);
         sprite.setDisplaySize(window.tileSize, window.tileSize);
+        applyTransparencyMask(scene, sprite);
         sprite.setVelocity(100, 100);
         workerGroup.add(sprite);
         gameState.workers.push({ sprite: sprite });
-    } else {
-        showAnnouncement("Dinheiro insuficiente!");
     }
 }
