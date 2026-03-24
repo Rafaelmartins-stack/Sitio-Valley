@@ -87,10 +87,9 @@ function create() {
         }
     }
 
-    // Timers e Outros
-    for(let i=0; i<3; i++) spawnHole(this, true); 
-    this.time.addEvent({ delay: 5000, callback: () => spawnCar(this), loop: true });
-    this.time.addEvent({ delay: 6000, callback: () => spawnCitizen(this), loop: true });
+    // Timers de Vida Urbana (Mais frequentes agora)
+    this.time.addEvent({ delay: 2000, callback: () => spawnCar(this), loop: true });
+    this.time.addEvent({ delay: 3000, callback: () => spawnCitizen(this), loop: true });
     this.time.addEvent({ delay: 10000, callback: () => spawnHole(this, true), loop: true });
 
     // Colisões e Overlaps
@@ -113,29 +112,34 @@ function create() {
 }
 
 function update() {
-    // Mover NPCs e sincronizar máscaras
+    // Mover NPCs e sincronizar máscaras/emojis
     gameState.workers.forEach(w => {
         if (w.sprite.active) {
-            moveNPC(w.sprite, 100, 0.05); // Aumentada frequência de movimento
+            moveNPC(w.sprite, 100, 0.05);
             if (w.sprite.customMask) {
-                w.sprite.customMask.x = w.sprite.x;
-                w.sprite.customMask.y = w.sprite.y;
+                w.sprite.customMask.setPosition(w.sprite.x, w.sprite.y);
             }
         }
     });
 
     gameState.citizens.forEach(c => {
         if (c.sprite.active) {
-            moveNPC(c.sprite, 60, 0.03);
+            if (!c.isDistracted) {
+                moveNPC(c.sprite, 60, 0.03);
+            } else {
+                c.sprite.body.setVelocity(0, 0); // Para para olhar o celular
+                if (c.cellIcon) {
+                    c.cellIcon.setPosition(c.sprite.x, c.sprite.y - 20);
+                }
+            }
             if (c.sprite.customMask) {
-                c.sprite.customMask.x = c.sprite.x;
-                c.sprite.customMask.y = c.sprite.y;
+                c.sprite.customMask.setPosition(c.sprite.x, c.sprite.y);
             }
         }
     });
 
     carGroup.children.entries.forEach(car => {
-        if (car.x > config.width + 100) car.destroy();
+        if (car.x > config.width + 100 || car.x < -100) car.destroy();
     });
 }
 
@@ -175,12 +179,10 @@ function createRoadTexture(scene) {
 
 function createCarTexture(scene) {
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-    graphics.fillStyle(0x3b82f6, 1);
-    graphics.fillRect(5, 10, 22, 12); // Corpo menor
-    graphics.fillStyle(0x60a5fa, 1);
-    graphics.fillRect(10, 11, 10, 10);
+    graphics.fillStyle(0xef4444, 1); // Carros vermelhos aparecem melhor
+    graphics.fillRect(5, 10, 22, 12);
     graphics.fillStyle(0x000000, 1);
-    graphics.fillRect(6, 8, 4, 2); graphics.fillRect(20, 8, 4, 2); // Rodas
+    graphics.fillRect(6, 8, 4, 2); graphics.fillRect(20, 8, 4, 2);
     graphics.fillRect(6, 22, 4, 2); graphics.fillRect(20, 22, 4, 2);
     graphics.generateTexture('car', 32, 32);
 }
@@ -188,20 +190,48 @@ function createCarTexture(scene) {
 function spawnCar(scene) {
     const ts = window.tileSize;
     const roadY = 7 * ts + ts/2;
-    const car = scene.physics.add.sprite(-50, roadY, 'car');
-    car.setVelocityX(120);
+    const fromRight = Math.random() > 0.5;
+    const startX = fromRight ? 850 : -50;
+    
+    const car = scene.physics.add.sprite(startX, roadY, 'car');
+    car.setVelocityX(fromRight ? -150 : 150);
+    car.flipX = fromRight;
     carGroup.add(car);
 }
 
 function spawnCitizen(scene) {
     const x = Phaser.Math.Between(0, 800);
     const y = Phaser.Math.Between(0, 600);
-    const citizen = scene.physics.add.sprite(x, y, 'worker');
-    citizen.setTint(Phaser.Math.Between(0x000000, 0xffffff));
-    citizen.setDisplaySize(window.tileSize, window.tileSize);
-    applyTransparencyMask(scene, citizen);
-    citizenGroup.add(citizen);
-    gameState.citizens.push({ sprite: citizen });
+    const sprite = scene.physics.add.sprite(x, y, 'worker');
+    
+    sprite.setTint(Phaser.Math.Between(0x000000, 0xffffff));
+    sprite.setDisplaySize(window.tileSize, window.tileSize);
+    sprite.setInteractive();
+    
+    const citizen = {
+        sprite: sprite,
+        isDistracted: Math.random() < 0.3,
+        cellIcon: null
+    };
+
+    if (citizen.isDistracted) {
+        citizen.cellIcon = scene.add.text(x, y - 20, '📱', { fontSize: '16px' }).setOrigin(0.5);
+        showAnnouncement("Cidadão distraído detectado!");
+    }
+
+    sprite.on('pointerdown', () => {
+        if (citizen.isDistracted) {
+            citizen.isDistracted = false;
+            if (citizen.cellIcon) citizen.cellIcon.destroy();
+            gameState.money += 5;
+            updateUI();
+            showAnnouncement("Prevenção! +$5");
+        }
+    });
+
+    applyTransparencyMask(scene, sprite);
+    citizenGroup.add(sprite);
+    gameState.citizens.push(citizen);
 }
 
 function spawnHole(scene, onRoad = false) {
