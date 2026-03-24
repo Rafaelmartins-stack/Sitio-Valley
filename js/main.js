@@ -80,6 +80,7 @@ function create() {
     // Criar Texturas IMEDIATAMENTE antes de qualquer spawn
     createRoadTexture(this);
     createCarTexture(this);
+    createPoliceTexture(this); // Criar a nova skin do policial
 
     // Gerar Mapa
     for (let y = 0; y < config.height / tileSize; y++) {
@@ -109,6 +110,33 @@ function create() {
     });
 
     window.gameScene = this;
+}
+
+function createPoliceTexture(scene) {
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+    
+    // Corpo (Navy Blue)
+    graphics.fillStyle(0x1e293b, 1);
+    graphics.fillRoundedRect(6, 8, 20, 20, 4);
+    
+    // Braços
+    graphics.fillRect(4, 10, 4, 12);
+    graphics.fillRect(24, 10, 4, 12);
+    
+    // Chapéu (Preto)
+    graphics.fillStyle(0x0f172a, 1);
+    graphics.fillRect(8, 4, 16, 6);
+    graphics.fillRect(6, 8, 20, 2); // Aba
+    
+    // Distintivo Dourado
+    graphics.fillStyle(0xfacc15, 1);
+    graphics.fillCircle(16, 14, 2);
+    
+    // Cinto (Preto)
+    graphics.fillStyle(0x000000, 1);
+    graphics.fillRect(6, 20, 20, 3);
+
+    graphics.generateTexture('police_agent', 32, 32);
 }
 
 function update() {
@@ -357,11 +385,10 @@ window.hireWorker = function() {
         gameState.money -= 100;
         updateUI();
         const scene = window.gameScene;
-        const sprite = scene.physics.add.sprite(400, 300, 'worker');
+        const sprite = scene.physics.add.sprite(400, 300, 'police_agent');
         sprite.setCollideWorldBounds(true);
         sprite.setBounce(1, 1);
         sprite.setDisplaySize(window.tileSize, window.tileSize);
-        applyTransparencyMask(scene, sprite);
         sprite.setVelocity(100, 100);
         workerGroup.add(sprite);
         gameState.workers.push({ sprite: sprite });
