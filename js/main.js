@@ -77,7 +77,7 @@ function create() {
     carGroup = this.physics.add.group();
     citizenGroup = this.physics.add.group();
 
-    // Criar Texturas
+    // Criar Texturas IMEDIATAMENTE antes de qualquer spawn
     createRoadTexture(this);
     createCarTexture(this);
 
@@ -96,7 +96,7 @@ function create() {
     }
 
     // Timers de Vida Urbana (Muito mais frequentes agora!)
-    this.time.addEvent({ delay: 800, callback: () => spawnCar(this), loop: true });
+    this.time.addEvent({ delay: 1200, callback: () => spawnCar(this), loop: true });
     this.time.addEvent({ delay: 3000, callback: () => spawnCitizen(this), loop: true });
     this.time.addEvent({ delay: 10000, callback: () => spawnHole(this, true), loop: true });
 
@@ -186,69 +186,45 @@ function createRoadTexture(scene) {
 }
 
 function createCarTexture(scene) {
-    const colors = {
-        'car_red': 0xef4444,
-        'car_blue': 0x3b82f6,
-        'car_green': 0x22c55e,
-        'car_yellow': 0xeab308
-    };
+    // Versão Simplificada e Robusta para garantir visibilidade
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+    
+    // Corpo Vermelho Vivo
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillRect(4, 8, 24, 16);
+    
+    // Janelas Azuis Claras
+    graphics.fillStyle(0x00ffff, 1);
+    graphics.fillRect(10, 10, 12, 12);
+    
+    // Rodas Pretas
+    graphics.fillStyle(0x000000, 1);
+    graphics.fillRect(6, 6, 4, 4);
+    graphics.fillRect(20, 6, 4, 4);
+    graphics.fillRect(6, 22, 4, 4);
+    graphics.fillRect(20, 22, 4, 4);
 
-    // Criar as 4 skins básicas + Station Wagon Presidencial
-    Object.entries(colors).forEach(([key, color]) => {
-        const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(0x000000, 0.3);
-        graphics.fillRoundedRect(2, 2, 28, 28, 6);
-        graphics.fillStyle(color, 1);
-        graphics.fillRoundedRect(4, 6, 24, 20, 4);
-        graphics.fillStyle(0xbae6fd, 1); 
-        graphics.fillRoundedRect(8, 8, 16, 16, 2);
-        graphics.fillStyle(color, 1); 
-        graphics.fillRect(15, 8, 2, 16);
-        graphics.generateTexture(key, 32, 32);
-    });
-
-    // Skin Station Wagon (Inspirada no upload do usuário)
-    const wagon = scene.make.graphics({ x: 0, y: 0, add: false });
-    wagon.fillStyle(0x000000, 0.3);
-    wagon.fillRoundedRect(2, 2, 36, 28, 6); // Alongada
-    wagon.fillStyle(0xef4444, 1);
-    wagon.fillRoundedRect(2, 6, 32, 20, 4);
-    wagon.fillStyle(0x3b82f6, 1); // Vidros azuis
-    wagon.fillRect(10, 8, 10, 16); // Vidro frontal/central
-    wagon.fillRect(22, 8, 8, 16); // Vidro traseiro (Station Wagon)
-    wagon.fillStyle(0x1e293b, 1); // Rodas
-    wagon.fillRect(6, 4, 6, 4); wagon.fillRect(24, 4, 6, 4);
-    wagon.fillRect(6, 24, 6, 4); wagon.fillRect(24, 24, 6, 4);
-    wagon.generateTexture('car_station_wagon', 40, 32);
+    graphics.generateTexture('car_simple', 32, 32);
 }
 
 function spawnCar(scene) {
-    const ts = window.tileSize;
-    const roadY = 7 * ts + ts/2;
+    if (!carGroup) return; // Segurança contra inicialização lenta
+    
+    const ts = window.tileSize || 32;
+    const roadY = 7 * ts + ts/2; // O asfalto está na linha 7
     const fromRight = Math.random() > 0.5;
     const startX = fromRight ? 850 : -50;
     
-    // Chance de ser a Station Wagon especial
-    let randomKey = Phaser.Utils.Array.GetRandom(['car_red', 'car_blue', 'car_green', 'car_yellow']);
-    if (Math.random() < 0.15) randomKey = 'car_station_wagon';
-    
-    const car = scene.physics.add.sprite(startX, roadY, randomKey).setInteractive();
+    const car = scene.physics.add.sprite(startX, roadY, 'car_simple').setInteractive();
+    car.setDepth(100); // Garante que o carro fique por cima de tudo
     car.setVelocityX(fromRight ? -150 : 150);
     car.flipX = fromRight;
     
-    // Função Especial: Clicar no carro faz ele "seguir o mouse" (Carro Presidencial)
+    // Mecânica de Controle
     car.on('pointerdown', () => {
-        showAnnouncement("Comando Presidencial Ativo! O carro seguirá você!");
-        car.setTint(0xffffff);
-        scene.time.addEvent({
-            delay: 50,
-            repeat: 100, // 5 segundos
-            callback: () => {
-                if (car.active) {
-                    scene.physics.moveToObject(car, scene.input.activePointer, 300);
-                }
-            }
-        });
+        showAnnouncement("Carro sob controle presidencial!");
+        car.setTint(0x00ff00);
+        scene.physics.moveToObject(car, scene.input.activePointer, 300);
     });
 
     carGroup.add(car);
