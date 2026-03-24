@@ -186,42 +186,46 @@ function createRoadTexture(scene) {
 }
 
 function createCarTexture(scene) {
-    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-    
-    // Sombra (Underneath)
-    graphics.fillStyle(0x000000, 0.3);
-    graphics.fillRoundedRect(2, 2, 28, 28, 6);
+    const colors = {
+        'car_red': 0xef4444,
+        'car_blue': 0x3b82f6,
+        'car_green': 0x22c55e,
+        'car_yellow': 0xeab308
+    };
 
-    // Corpo do Carro (Vibrante)
-    graphics.fillStyle(0xef4444, 1);
-    graphics.fillRoundedRect(4, 6, 24, 20, 4);
+    Object.entries(colors).forEach(([key, color]) => {
+        const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+        
+        // Sombra
+        graphics.fillStyle(0x000000, 0.3);
+        graphics.fillRoundedRect(2, 2, 28, 28, 6);
 
-    // Vidro (Roof)
-    graphics.fillStyle(0xbae6fd, 1); // Light Blue Glass
-    graphics.fillRoundedRect(8, 8, 16, 16, 2);
+        // Corpo do Carro (Cor Dinâmica)
+        graphics.fillStyle(color, 1);
+        graphics.fillRoundedRect(4, 6, 24, 20, 4);
 
-    // Janelas Separadoras
-    graphics.fillStyle(0xef4444, 1); 
-    graphics.fillRect(15, 8, 2, 16);
+        // Vidro
+        graphics.fillStyle(0xbae6fd, 1); 
+        graphics.fillRoundedRect(8, 8, 16, 16, 2);
 
-    // Faróis (Headlights - Right side when forward)
-    graphics.fillStyle(0xfde047, 1);
-    graphics.fillRect(26, 8, 2, 4);  // Top Light
-    graphics.fillRect(26, 18, 2, 4); // Bottom Light
+        // Vidro Central
+        graphics.fillStyle(color, 1); 
+        graphics.fillRect(15, 8, 2, 16);
 
-    // Lanternas (Taillights - Left side)
-    graphics.fillStyle(0x991b1b, 1);
-    graphics.fillRect(4, 8, 2, 4);
-    graphics.fillRect(4, 18, 2, 4);
+        // Faróis (Lado Direito)
+        graphics.fillStyle(0xfde047, 1);
+        graphics.fillRect(26, 8, 2, 3);
+        graphics.fillRect(26, 19, 2, 3);
 
-    // Rodas (Mais detalhadas)
-    graphics.fillStyle(0x1e293b, 1);
-    graphics.fillRoundedRect(6, 4, 6, 4, 1);
-    graphics.fillRoundedRect(20, 4, 6, 4, 1);
-    graphics.fillRoundedRect(6, 24, 6, 4, 1);
-    graphics.fillRoundedRect(20, 24, 6, 4, 1);
+        // Rodas
+        graphics.fillStyle(0x1e293b, 1);
+        graphics.fillRoundedRect(6, 4, 6, 4, 1);
+        graphics.fillRoundedRect(20, 4, 6, 4, 1);
+        graphics.fillRoundedRect(6, 24, 6, 4, 1);
+        graphics.fillRoundedRect(20, 24, 6, 4, 1);
 
-    graphics.generateTexture('car', 32, 32);
+        graphics.generateTexture(key, 32, 32);
+    });
 }
 
 function spawnCar(scene) {
@@ -230,7 +234,11 @@ function spawnCar(scene) {
     const fromRight = Math.random() > 0.5;
     const startX = fromRight ? 850 : -50;
     
-    const car = scene.physics.add.sprite(startX, roadY, 'car');
+    // Sorteia uma cor aleatória
+    const carKeys = ['car_red', 'car_blue', 'car_green', 'car_yellow'];
+    const randomKey = Phaser.Utils.Array.GetRandom(carKeys);
+    
+    const car = scene.physics.add.sprite(startX, roadY, randomKey);
     car.setVelocityX(fromRight ? -150 : 150);
     car.flipX = fromRight;
     carGroup.add(car);
